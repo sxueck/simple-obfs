@@ -212,6 +212,14 @@ deobfs_app_data(buffer_t *buf, size_t idx, obfs_t *obfs)
 
     frame_t *frame = (frame_t *)obfs->extra;
 
+    if (obfs->extra == NULL) {
+        obfs->extra = ss_malloc(sizeof(frame_t));
+        if (obfs->extra == NULL) {
+            return OBFS_ERROR;
+        }
+        memset(obfs->extra, 0, sizeof(frame_t));
+    }
+
     while (bidx < buf->len) {
         if (frame->len == 0) {
             if (frame->idx >= 0 && frame->idx < 3
@@ -231,7 +239,7 @@ deobfs_app_data(buffer_t *buf, size_t idx, obfs_t *obfs)
             continue;
         }
 
-        if (frame->len > 16384)
+        if (frame->len > MAX_FRAME_LENGTH)
             return OBFS_ERROR;
 
         int left_len = buf->len - bidx;
@@ -270,11 +278,17 @@ obfs_tls_request(buffer_t *buf, size_t cap, obfs_t *obfs)
         size_t host_len = strlen(obfs_tls->host);
         size_t ticket_len = sizeof(struct tls_ext_session_ticket);
         size_t other_ext_len = sizeof(struct tls_ext_others);
-        size_t tls_len = buf_len + hello_len + server_name_len
-            + host_len + ticket_len + other_ext_len;
+        if (buf_len > SIZE_MAX - (hello_len + server_name_len + host_len + ticket_len + other_ext_len)) {
+            return OBFS_ERROR;
+        }
+        size_t tls_len = buf_len + hello_len + server_name_len + host_len + ticket_len + other_ext_len;
 
-        brealloc(&tmp, buf_len, cap);
-        brealloc(buf,  tls_len, cap);
+        if (brealloc(&tmp, buf_len, cap) < 0) {
+            return OBFS_ERROR;
+        }
+        if (brealloc(buf, tls_len, cap) < 0) {
+            return OBFS_ERROR;
+        }
 
         memcpy(tmp.data, buf->data, buf_len);
 
@@ -287,6 +301,7 @@ obfs_tls_request(buffer_t *buf, size_t cap, obfs_t *obfs)
         uint32_t ts = CT_HTONL((uint32_t)time(NULL));
         memcpy(hello->random_bytes, &ts, 4);
         rand_bytes(hello->random_bytes + 4, 24);
+        hello->session_id_len = rand() % 32;
         rand_bytes(hello->session_id, 32);
         hello->ext_len = CT_HTONS(server_name_len + host_len + ticket_len + buf_len + other_ext_len);
 
@@ -338,8 +353,12 @@ obfs_tls_response(buffer_t *buf, size_t cap, obfs_t *obfs)
         size_t encrypted_handshake_len = sizeof(struct tls_encrypted_handshake);
         size_t tls_len = hello_len + change_cipher_spec_len + encrypted_handshake_len + buf_len;
 
-        brealloc(&tmp, buf_len, cap);
-        brealloc(buf,  tls_len, cap);
+        if (brealloc(&tmp, buf_len, cap) < 0) {
+            return OBFS_ERROR;
+        }
+        if (brealloc(buf, tls_len, cap) < 0) {
+            return OBFS_ERROR;
+        }
 
         memcpy(tmp.data, buf->data, buf_len);
 
@@ -387,6 +406,9 @@ deobfs_tls_request(buffer_t *buf, size_t cap, obfs_t *obfs)
 
     if (obfs->extra == NULL) {
         obfs->extra = ss_malloc(sizeof(frame_t));
+        if (obfs->extra == NULL) {
+            return OBFS_ERROR;
+        }
         memset(obfs->extra, 0, sizeof(frame_t));
     }
 
@@ -455,6 +477,9 @@ deobfs_tls_response(buffer_t *buf, size_t cap, obfs_t *obfs)
 
     if (obfs->extra == NULL) {
         obfs->extra = ss_malloc(sizeof(frame_t));
+        if (obfs->extra == NULL) {
+            return OBFS_ERROR;
+        }
         memset(obfs->extra, 0, sizeof(frame_t));
     }
 

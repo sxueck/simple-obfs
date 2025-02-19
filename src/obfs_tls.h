@@ -25,6 +25,7 @@
 
 #include "obfs.h"
 
+#pragma pack(push, 1)
 struct tls_client_hello {
     char  content_type;
     short version;
@@ -45,6 +46,7 @@ struct tls_client_hello {
     char  comp_methods[1];
     short ext_len;
 } __attribute__((packed, aligned(1)));
+#pragma pack(pop)
 
 struct tls_ext_server_name {
     short ext_type;
@@ -136,5 +138,7 @@ typedef struct frame {
 } frame_t;
 
 extern obfs_para_t *obfs_tls;
+
+#define MAX_FRAME_LENGTH 16384
 
 #endif
