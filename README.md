@@ -1,6 +1,8 @@
 # simple-obfs
 
-Deprecated. Followed by [v2ray-plugin](https://github.com/shadowsocks/v2ray-plugin).
+**Please note that my original intention for this project was to implement it in simple scenarios such as the dedicated line entrance. Do not deploy it in places that require strong obfuscation**
+
+If you have other requirements, please refer to the project by [v2ray-plugin](https://github.com/shadowsocks/v2ray-plugin).
 
 ## Intro
 
